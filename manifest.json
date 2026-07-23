@@ -2,7 +2,7 @@
   "name": "电建二号 · 星地微波链路衰减计算器",
   "short_name": "DJ-02 链路计算",
   "description": "Ka-band 25.8GHz 星地微波链路衰减计算器, 基于 ITU-R P.838-3/618/839/840",
-  "start_url": "./链路衰减计算器.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0f1923",

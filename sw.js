@@ -1,6 +1,6 @@
 const CACHE = 'dj02-link-v1';
 const ASSETS = [
-  './链路衰减计算器.html',
+  './index.html',
   'https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js'
 ];
 
