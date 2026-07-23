@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电建二号 · 星地微波链路衰减计算器</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d2137'/><text x='16' y='22' text-anchor='middle' fill='%2358a6ff' font-size='16' font-weight='bold' font-family='sans-serif'>D</text></svg>">
+<meta name="theme-color" content="#0d2137">
+<script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:#0f1923;color:#c9d1d9;min-height:100vh}
+.header{background:linear-gradient(135deg,#1a2a3a,#0d2137);padding:18px 32px;border-bottom:2px solid #1e3a5f}
+.header h1{font-size:20px;color:#58a6ff;font-weight:600}
+.header span{font-size:12px;color:#8b949e;margin-left:12px}
+.container{display:flex;padding:16px;gap:16px;max-width:1500px;margin:0 auto}
+.panel{background:#161b22;border:1px solid #30363d;border-radius:8px}
+.panel-header{background:#1c2333;padding:10px 16px;font-size:14px;font-weight:600;color:#c9d1d9;border-bottom:1px solid #30363d;border-radius:8px 8px 0 0}
+.panel-body{padding:12px 16px}
+.left{width:380px;flex-shrink:0}
+.right{flex:1;display:flex;flex-direction:column;gap:16px}
+.form-group{margin-bottom:10px}
+.form-group label{display:block;font-size:12px;color:#8b949e;margin-bottom:3px}
+.form-group label .var{color:#58a6ff;font-family:Consolas,monospace}
+.form-group select,.form-group input[type=range]{width:100%}
+.form-group select{background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:6px 8px;font-size:13px}
+.slider-row{display:flex;align-items:center;gap:8px}
+.slider-row input[type=range]{flex:1;accent-color:#58a6ff}
+.slider-row .val{min-width:48px;text-align:right;font-size:12px;color:#58a6ff;font-family:Consolas,monospace}
+.polar-group{display:flex;gap:8px}
+.polar-group button{flex:1;padding:6px;border:1px solid #30363d;border-radius:4px;background:#0d1117;color:#8b949e;font-size:12px;cursor:pointer}
+.polar-group button.active{background:#1f3a5f;border-color:#58a6ff;color:#58a6ff}
+.btn-calc{width:100%;padding:12px;background:linear-gradient(135deg,#1f6feb,#1a5cc7);border:none;border-radius:6px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px}
+.btn-calc:hover{background:linear-gradient(135deg,#388bfd,#1f6feb)}
+.result-table{width:100%;border-collapse:collapse;font-size:12px}
+.result-table td{padding:5px 8px;border-bottom:1px solid #21262d}
+.result-table td:first-child{color:#8b949e;width:140px}
+.result-table td:last-child{font-family:Consolas,monospace;text-align:right}
+.bad{color:#f85149}.warn{color:#d29922}.good{color:#3fb950}
+.chart-wrap{position:relative;height:260px}
+.chart-wrap canvas{width:100%!important;height:100%!important}
+#verdict{padding:10px 14px;border-radius:4px;font-size:13px;font-weight:600;margin-top:8px}
+.verdict-ok{background:rgba(63,185,80,.15);color:#3fb950}
+.verdict-warn{background:rgba(210,153,34,.15);color:#d29922}
+.verdict-fail{background:rgba(248,81,73,.15);color:#f85149}
+.footnote{font-size:10px;color:#484f58;margin-top:8px;text-align:center}
+.ref-tag{font-size:10px;margin-left:6px;padding:0 5px;border-radius:3px;white-space:nowrap;cursor:help}
+.ref-requirement{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}
+.ref-actual{background:rgba(63,185,80,.15);color:#3fb950;border:1px solid rgba(63,185,80,.3)}
+.gain-readout{font-size:10px;color:#8b949e;margin-top:3px}
+.gain-readout span{color:#3fb950;font-family:Consolas,monospace;font-size:11px}
+
+@media screen and (max-width:860px) {
+  .header{padding:12px 14px}
+  .header h1{font-size:16px}
+  .header span{display:block;font-size:11px;margin-left:0;margin-top:2px}
+  .container{flex-direction:column;padding:8px;gap:8px}
+  .left{width:100%;flex-shrink:1}
+  .right{gap:10px}
+  .panel-header{font-size:13px;padding:8px 12px}
+  .panel-body{padding:8px 12px}
+  .form-group{margin-bottom:8px}
+  .form-group label{font-size:11px}
+  .form-group select{padding:8px;font-size:14px}
+  .slider-row input[type=range]{height:24px}
+  .slider-row .val{font-size:13px;min-width:44px}
+  .polar-group button{padding:10px 6px;font-size:13px}
+  .btn-calc{padding:14px;font-size:16px}
+  .result-table{font-size:11px}
+  .result-table td{padding:4px 6px}
+  .result-table td:first-child{width:auto}
+  .chart-wrap{height:200px}
+  .footnote{font-size:9px;padding:0 6px}
+  #verdict{font-size:12px}
+  #presetBar button{font-size:9px;padding:4px 6px}
+  #presetBar{flex-wrap:wrap;gap:3px}
+  #wetParams button{font-size:9px;padding:4px 6px}
+  .chart-row{flex-direction:column!important}
+  .chart-row>.panel{flex:auto!important}
+}
+</style>
+</head>
+<body>
+<div class="header"><h1>电建二号 DJ-02 · 星地微波链路衰减计算器<span>Ka-band 25.8GHz · ITU-R P.838-3/618/839/840</span></h1></div>
+<div class="container">
+
+<div class="panel left">
+<div class="panel-header">⚙ 输入参数（第1层 · 独立变量） <span style="font-weight:normal;font-size:11px;margin-left:8px;color:#58a6ff;cursor:pointer" onclick="var e=document.getElementById('presetBar');e.style.display=e.style.display==='none'?'flex':'none'">▸ 预设场景</span></div>
+<div class="panel-body">
+<div id="presetBar" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;padding:6px;background:#0d1117;border-radius:4px">
+<button onclick="applyPreset('extreme')" style="font-size:10px;padding:3px 6px;background:#3a1c1c;color:#f85149;border:1px solid #5c2a2a;border-radius:3px;cursor:pointer">极端暴雨</button>
+<button onclick="applyPreset('heavy_para')" style="font-size:10px;padding:3px 6px;background:#2a1c0a;color:#d29922;border:1px solid #5c3a10;border-radius:3px;cursor:pointer">暴雨+大口径</button>
+<button onclick="applyPreset('heavy_phase')" style="font-size:10px;padding:3px 6px;background:#2a1c0a;color:#d29922;border:1px solid #5c3a10;border-radius:3px;cursor:pointer">暴雨+相控阵</button>
+<button onclick="applyPreset('moderate')" style="font-size:10px;padding:3px 6px;background:#1a2a1c;color:#3fb950;border:1px solid #1e3f22;border-radius:3px;cursor:pointer">中等降雨</button>
+<button onclick="applyPreset('clear')" style="font-size:10px;padding:3px 6px;background:#161b22;color:#58a6ff;border:1px solid #1e3a5f;border-radius:3px;cursor:pointer">晴空基线</button>
+<button onclick="applyPreset('doc_ref')" style="font-size:10px;padding:3px 6px;background:#161b22;color:#8b949e;border:1px solid #30363d;border-radius:3px;cursor:pointer">文档参照</button>
+</div>
+<div class="form-group">
+<label>降雨强度 <span class="var">R</span> (mm/h) <span class="ref-tag ref-requirement" title="地面终端实施方案 2.1节：最大设计降雨量考核指标">设计≤50</span></label>
+<div class="slider-row"><input type="range" id="rainRate" min="0" max="100" value="10" step="1" oninput="updateSlider('rainRate')"><span class="val" id="rainRate_val">10</span></div>
+</div>
+<div class="form-group">
+<label>地面天线仰角 <span class="var">θ</span> (°) <span class="ref-tag ref-requirement" title="地面终端实施方案 2.2节：最低有效工作仰角30°">最低≥30°</span></label>
+<div class="slider-row"><input type="range" id="elevation" min="5" max="90" value="30" step="1" oninput="updateSlider('elevation')"><span class="val" id="elevation_val">30</span></div>
+</div>
+<div class="form-group">
+<label>极化方式 <span class="var">Pol</span></label>
+<div class="polar-group" id="polGroup">
+<button class="active" onclick="setPol('H',this)">水平极化 H</button>
+<button onclick="setPol('V',this)">垂直极化 V</button>
+</div>
+</div>
+<div class="form-group">
+<label>天线体制 <span class="var">AntType</span></label>
+<select id="antType" onchange="toggleAnt()"><option value="parabolic">抛物面天线</option><option value="phased">相控阵天线</option></select>
+</div>
+<div class="form-group" id="parabolicDiv">
+<label>抛物面口径 <span class="var">D</span> (m) <span class="ref-tag ref-requirement" title="成电方案V2.1：1.8m大口径方案；文档第三章：等效口径0.45m">规格 0.45 / 1.8m</span></label>
+<div class="slider-row"><input type="range" id="diameter" min="0.3" max="2.5" value="0.45" step="0.05" oninput="updateSlider('diameter')"><span class="val" id="diameter_val">0.45</span></div>
+<div class="gain-readout">→ 天线增益 Gr = <span id="parabolic_gain">—</span> dBi</div>
+</div>
+<div class="form-group" id="phasedDiv" style="display:none">
+<label>相控阵阵元数 <span class="var">N_elem</span> <span class="ref-tag ref-requirement" title="相控阵天线方案V1.0 表2：接收阵面32×18=576阵元；发射阵面32×24=768阵元">接收576</span></label>
+<div class="slider-row"><input type="range" id="nElem" min="64" max="1024" value="576" step="16" oninput="updateSlider('nElem')"><span class="val" id="nElem_val">576</span></div>
+<div class="gain-readout">→ 天线增益 Gr = <span id="phased_gain">—</span> dBi</div>
+</div>
+<div class="form-group">
+<label>接收机噪声系数 <span class="var">NF</span> (dB) <span class="ref-tag ref-requirement" title="成电方案V2.1 表3-1：系统指标≤5dB">指标≤5</span> <span class="ref-tag ref-actual" title="成电方案V2.1 §3.3.3：实测链路NF约1.1dB">实测~1.1</span></label>
+<div class="slider-row"><input type="range" id="noiseFig" min="0.5" max="8" value="1.1" step="0.1" oninput="updateSlider('noiseFig')"><span class="val" id="noiseFig_val">1.1</span></div>
+</div>
+<div class="form-group">
+<label>信号体制 <span class="var">BW</span> <span class="ref-tag ref-actual" style="font-weight:normal" id="sigAutoTag">自动：单音CW</span></label>
+<select id="sigType" onchange="calculate()">
+<option value="auto">自动（根据雨强选择）</option>
+<option value="tone">单音信号 (CW)</option>
+<option value="wb15">15Hz 宽带信号</option>
+<option value="wb15spread">15Hz 宽带 + 扩频×105</option>
+</select>
+</div>
+<div class="form-group">
+<label><span class="var">G_coh</span> 相干累积增益 (dB) <span class="ref-tag ref-requirement" title="文档阈值：50mm/h+θ=30°+单音SNR=15.24 → 缺口9.36dB；计算器(NF=1.1)缺口≈8dB">暴雨缺≈8</span></label>
+<div class="slider-row"><input type="range" id="cohGain" min="0" max="30" value="0" step="0.5" oninput="updateSlider('cohGain')"><span class="val" id="cohGain_val">0</span></div>
+<div style="font-size:10px;color:#d29922;margin-top:3px">→ 达到 ±0.5dB 精度尚需累积增益 <span style="color:#f85149;font-family:Consolas,monospace;font-size:11px" id="needCoh">—</span> dB</div>
+</div>
+<div class="form-group">
+<label>降雨类型 <span class="var">RainType</span></label>
+<select id="rainType"><option value="stratiform">层状降雨</option><option value="convective">对流降雨（含融化层）</option></select>
+</div>
+<div class="form-group">
+<label>地面站 <span class="var">Station</span></label>
+<select id="station"><option value="jiali">嘉黎 (4500m)</option><option value="linzhi">林芝 (3000m)</option><option value="paizhen" selected>派镇 (2900m)</option><option value="beibeng">背崩 (700m)</option><option value="motuo">墨脱 (1200m)</option><option value="bomi">波密 (2700m)</option></select>
+</div>
+<div class="form-group">
+<label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+<input type="checkbox" id="wetAnt" onchange="toggleWet()" style="accent-color:#58a6ff"> <span class="var">湿天线附加损耗</span> <span class="ref-tag ref-actual" title="成电方案V2.1 §4.1：超疏水涂层+气动风刀物理抑制 + 同址雨量计算法剥离">涂层+风刀后 0.3~0.8dB@50mm/h</span>
+</label>
+<div id="wetParams" style="display:none;margin-top:6px;padding:6px 8px;background:#0d1117;border-radius:4px">
+<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+<span style="font-size:11px;color:#8b949e">A_wet = A_max · (1 − e^(−R/R₀))</span>
+<button onclick="applyWetPreset('bare')" style="font-size:9px;padding:2px 5px;background:#3a1c1c;color:#f85149;border:1px solid #5c2a2a;border-radius:3px;cursor:pointer;margin-left:auto">无涂层</button>
+<button onclick="applyWetPreset('coated')" style="font-size:9px;padding:2px 5px;background:#2a1c0a;color:#d29922;border:1px solid #5c3a10;border-radius:3px;cursor:pointer">纳米涂层</button>
+<button onclick="applyWetPreset('blower')" style="font-size:9px;padding:2px 5px;background:#1a2a1c;color:#3fb950;border:1px solid #1e3f22;border-radius:3px;cursor:pointer">涂层+风刀</button>
+</div>
+<label style="font-size:10px;color:#8b949e">饱和损耗 A_max (dB) <span class="ref-tag ref-actual" style="font-weight:normal;margin-left:4px">无涂层~3 涂层~1 涂层+风刀~0.5</span></label>
+<div class="slider-row"><input type="range" id="wetAmax" min="0" max="5" value="1.0" step="0.1" oninput="updateSlider('wetAmax')"><span class="val" id="wetAmax_val">1.0</span></div>
+<label style="font-size:10px;color:#8b949e">特征雨强 R₀ (mm/h)</label>
+<div class="slider-row"><input type="range" id="wetR0" min="3" max="25" value="10" step="0.5" oninput="updateSlider('wetR0')"><span class="val" id="wetR0_val">10</span></div>
+</div>
+</div>
+<button class="btn-calc" onclick="calculate()">▶ 一键计算</button>
+</div>
+</div>
+
+<div class="right">
+<div class="panel">
+<div class="panel-header">📊 链路预算结果（第2层 · 中间变量 → 第3层 · 判断指标）</div>
+<div class="panel-body">
+<table class="result-table" id="resultTable">
+<tr><td>星地斜距</td><td id="r_slant">—</td></tr>
+<tr><td>自由空间损耗 FSPL</td><td id="r_fspl">—</td></tr>
+<tr><td>气体衰减 A_gas</td><td id="r_gas">—</td></tr>
+<tr><td>云衰减 A_cloud</td><td id="r_cloud">—</td></tr>
+<tr><td>比雨衰 γ_R</td><td id="r_gamma">—</td></tr>
+          <tr><td>雨衰减 A_rain</td><td id="r_rain">—</td></tr>
+          <tr><td>　　有效雨高 hR</td><td id="r_hR">—</td></tr>
+          <tr><td>　　有效雨路径 L_eff</td><td id="r_leff">—</td></tr>
+<tr><td style="font-weight:600;color:#c9d1d9">大气总衰减 A_total</td><td id="r_total" style="font-weight:600">—</td></tr>
+<tr class="wetRow" style="display:none"><td style="padding-left:16px;color:#f0883e">┗ 湿天线附加 A_wet</td><td id="r_wet" style="color:#f0883e">—</td></tr>
+<tr><td>天线增益 Gr</td><td id="r_gr">—</td></tr>
+<tr><td style="font-weight:600;color:#c9d1d9">接收功率 Pr</td><td id="r_pr" style="font-weight:600">—</td></tr>
+<tr style="border-top:2px solid #30363d"><td colspan="2" style="color:#f0883e;font-weight:600;font-size:11px;padding:6px 8px 2px 8px">▼ 噪声温度分解（Tsys = Ta + Tr）</td></tr>
+<tr><td style="padding-left:16px">┗ 天线噪声 Ta（天空/雨层辐射）</td><td id="r_ta">—</td></tr>
+<tr><td style="padding-left:16px">┗ 接收机引入 Tr = 290·(10^(NF/10)-1)</td><td id="r_tr">—</td></tr>
+<tr><td>系统噪声温度 Tsys = Ta + Tr</td><td id="r_tsys">—</td></tr>
+<tr><td>噪声功率谱密度 N0 = k·Tsys</td><td id="r_n0">—</td></tr>
+<tr><td style="font-weight:600;color:#58a6ff">载噪比 C/N0</td><td id="r_cn0" style="font-weight:600">—</td></tr>
+<tr><td style="font-weight:600;color:#58a6ff">信噪比 SNR</td><td id="r_snr" style="font-weight:600">—</td></tr>
+<tr><td style="font-weight:600;color:#f0883e">功率测量误差 ΔP</td><td id="r_dp" style="font-weight:600">—</td></tr>
+</table>
+<div id="verdict"></div>
+</div>
+</div>
+<div class="chart-row" style="display:flex;gap:16px">
+<div class="panel" style="flex:1"><div class="panel-header">📈 衰减组成（当前工况）</div><div class="panel-body"><div class="chart-wrap"><canvas id="barCanvas"></canvas></div></div></div>
+<div class="panel" style="flex:1"><div class="panel-header">📉 SNR 随仰角变化 (R=<span id="curveLabel">0</span>mm/h)</div><div class="panel-body"><div class="chart-wrap"><canvas id="curveCanvas"></canvas></div></div></div>
+</div>
+<div class="footnote">SC EXCELL fill-factor ff=1/(1+0.166·x^1.48) x=1/sinθ-1 · ITU-R P.838-3 k/α (log/lin插值 25→25.8GHz) · P.839 雨顶 · P.840 云衰(站点LWP气候学) · P.835 气体衰(海拔依赖) · 湿天线饱和模型 A_max·(1−e^(−R/R₀)) (成电方案§4.1) | 电建二号 DJ-02 Ka 25.8GHz</div>
+</div>
+</div>
+
+<script>
+// === STATE ===
+let polarization = 'H';
+let barChart = null, curveChart = null;
+let _presetBusy = false;
+
+function _recalc() { if (!_presetBusy) calculate(); }
+
+function setPol(p, btn) {
+  polarization = p;
+  document.querySelectorAll('#polGroup button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _recalc();
+}
+function toggleAnt() {
+  var t = document.getElementById('antType').value;
+  document.getElementById('parabolicDiv').style.display = t==='parabolic'?'block':'none';
+  document.getElementById('phasedDiv').style.display = t==='phased'?'block':'none';
+  _recalc();
+}
+function toggleWet() {
+  var cb = document.getElementById('wetAnt');
+  document.getElementById('wetParams').style.display = cb.checked?'block':'none';
+  document.querySelectorAll('.wetRow').forEach(function(r){r.style.display=cb.checked?'':'none';});
+  _recalc();
+}
+var wetPresets = {
+  bare:{amax:3.0,r0:10},
+  coated:{amax:1.0,r0:10},
+  blower:{amax:0.5,r0:10}
+};
+function applyWetPreset(n) {
+  var p = wetPresets[n];
+  _presetBusy = true;
+  document.getElementById('wetAnt').checked = true;
+  document.getElementById('wetAmax').value = p.amax; updateSlider('wetAmax');
+  document.getElementById('wetR0').value = p.r0; updateSlider('wetR0');
+  _presetBusy = false;
+  toggleWet();
+}
+function updateSlider(id) {
+  var el = document.getElementById(id), v = parseFloat(el.value);
+  if (id==='diameter') v = Math.round(v * 20) / 20;
+  document.getElementById(id+'_val').textContent = (id==='diameter') ? v.toFixed(2) : (id==='noiseFig'||id==='wetAmax') ? v.toFixed(1) : v;
+  _recalc();
+}
+
+// === DATA ===
+var stations = {
+  jiali:{name:'嘉黎',lat:30.646,lon:93.249,alt:4.5,h0:4.85,hR_extra:3.2,lwp:0.3},
+  linzhi:{name:'林芝',lat:29.674,lon:94.360,alt:3.0,h0:5.00,hR_extra:3.3,lwp:0.5},
+  paizhen:{name:'派镇',lat:29.509,lon:94.848,alt:2.9,h0:5.02,hR_extra:3.3,lwp:0.6},
+  beibeng:{name:'背崩',lat:29.245,lon:95.175,alt:0.7,h0:5.05,hR_extra:3.6,lwp:0.8},
+  motuo:{name:'墨脱',lat:29.329,lon:95.331,alt:1.2,h0:5.04,hR_extra:3.5,lwp:0.7},
+  bomi:{name:'波密',lat:29.861,lon:95.767,alt:2.7,h0:5.02,hR_extra:3.3,lwp:0.5}
+}; // h0 ITU-R P.839 0℃ isotherm; hR_extra adjusted to preserve hR; lwp ITU-R P.840 climatology (kg/m²)
+var F_DOWN = 25.8, EIRP_DBW = 43, H_ORBIT = 800, R_EARTH = 6371, K_DBW = -228.6;
+var P838 = {H:{k:0.1366,a:1.0581},V:{k:0.1222,a:1.0311}}; // ITU-R P.838-3: log-interp k, lin-interp α for 25.8GHz (25→30GHz)
+var HR_POL_OFFSET = 0.28; // SC EXCELL: V-pol effective melting layer height above H-pol for convective rain (km)
+
+// === CORE ===
+function calculate() {
+  var R = parseFloat(document.getElementById('rainRate').value);
+  var theta_deg = parseFloat(document.getElementById('elevation').value);
+  var theta = theta_deg * Math.PI/180;
+  var antType = document.getElementById('antType').value;
+  var D = antType==='parabolic' ? parseFloat(document.getElementById('diameter').value) : 0;
+  var N_elem = antType==='phased' ? parseInt(document.getElementById('nElem').value) : 0;
+  var NF = parseFloat(document.getElementById('noiseFig').value);
+  var G_coh = parseFloat(document.getElementById('cohGain').value);
+  var rainType = document.getElementById('rainType').value;
+  var stn = stations[document.getElementById('station').value];
+
+  // 1. Slant range
+  var hs = stn.alt, sin_t = Math.sin(theta), cos_t = Math.cos(theta);
+  var d_km = (R_EARTH+hs)*(Math.sqrt(Math.pow((H_ORBIT+R_EARTH)/(R_EARTH+hs),2)-cos_t*cos_t)-sin_t);
+
+  // 2. FSPL
+  var L_fspl = 92.4 + 20*Math.log10(d_km) + 20*Math.log10(F_DOWN);
+
+  // 3. Rain attenuation (SC EXCELL fill-factor model, calibrated to 第三章) ----
+  var hR = rainType==='convective' ? stn.h0+stn.hR_extra : stn.h0;
+  if (rainType==='convective' && polarization==='V') hR += HR_POL_OFFSET;
+  var L_s = Math.max((hR-hs)/Math.max(sin_t,0.087), 0.1);
+  var coef = P838[polarization];
+  var gamma_R = coef.k * Math.pow(R, coef.a);
+   // Fill-factor: ff = 1/(1 + a*x^b), x = 1/sinθ - 1
+   // Recalibrated for P.838 25.8GHz interpolation + altitude-dependent gas + station LWP climatology
+   var a = 0.166, b = 1.48;
+   var x = 1/Math.max(sin_t,0.087) - 1;
+   var ff = 1/(1 + a*Math.pow(x, b));
+  var L_eff = Math.max(L_s * ff, hR - hs);
+  var A_rain = gamma_R * L_eff;
+
+  // 4. Gas (ITU-R P.835: altitude-dependent zenith attenuation)
+  var A_gas_zenith = 0.28 * Math.exp(-hs/8.0);
+  var A_gas = A_gas_zenith / Math.max(sin_t,0.087);
+
+  // 5. Cloud (ITU-R P.840: A=L·K_l/sinθ; K_l≈0.85 @25.8GHz/0℃; LWP climatology + rain-rate scaling)
+  var LWP = R < 0.5 ? (stn.lwp||0.5) : Math.min((stn.lwp||0.5) + 0.06*Math.pow(R, 0.95), 6.0);
+  var A_cloud = (0.85*LWP) / Math.max(sin_t,0.087);
+
+  // 6. Total atmospheric (rain+gas+cloud, per document definition)
+  var A_total = A_rain + A_gas + A_cloud;
+
+  // 6b. Wet antenna loss (empirical saturation model, ref 成电方案 §4.1)
+  var wetAnt = document.getElementById('wetAnt').checked;
+  var A_wet = 0;
+  if (wetAnt) {
+    var A_max = parseFloat(document.getElementById('wetAmax').value);
+    var R0 = parseFloat(document.getElementById('wetR0').value);
+    A_wet = A_max * (1 - Math.exp(-R/R0));
+  }
+
+  // 8. Antenna gain
+  var Gr;
+  var lambda = 0.3/F_DOWN;
+  if (antType==='parabolic') {
+    var Ap = Math.PI*(D/2)*(D/2);
+    Gr = 10*Math.log10(4*Math.PI*Ap*0.6/(lambda*lambda));
+    document.getElementById('parabolic_gain').textContent = Gr.toFixed(1);
+  } else {
+    Gr = 10*Math.log10(N_elem) + 3.0; // 576 elem → 30.6 dBi per 相控阵天线方案V1.0 §3.2
+    document.getElementById('phased_gain').textContent = Gr.toFixed(1);
+  }
+
+  // 9. Pr
+  var Pr_dBW = EIRP_DBW - L_fspl - A_total - A_wet + Gr;
+  var Pr_dBm = Pr_dBW + 30;
+
+  // 10. Noise: Ta follows smooth exponential as rain column fills antenna beam
+  var Ta = R < 0.5 ? 30 : Math.min(30 + 260*(1-Math.exp(-R/8)), 290);
+  var Tr = 290 * (Math.pow(10,NF/10)-1);
+  var Tsys = Ta + Tr;
+  var N0_dBW = K_DBW + 10*Math.log10(Tsys);
+
+  // 11. SNR
+  var sigType = document.getElementById('sigType').value;
+  var isAuto = sigType === 'auto';
+  // Auto-select signal type based on rain rate (per 第三章 §3.1.3)
+  if (isAuto) {
+    sigType = R > 20 ? 'tone' : 'wb15spread';
+  }
+  var autoTag = document.getElementById('sigAutoTag');
+  if (isAuto) {
+    if (sigType==='tone') autoTag.textContent = '自动：单音CW';
+    else autoTag.textContent = '自动：15Hz扩频×105';
+  } else {
+    if (sigType==='tone') autoTag.textContent = '手动：单音CW';
+    else if (sigType==='wb15') autoTag.textContent = '手动：15Hz宽带';
+    else autoTag.textContent = '手动：15Hz扩频×105';
+  }
+
+  var BW_Hz = 1;
+  if (sigType==='wb15' || sigType==='wb15spread') BW_Hz = 15;
+  // Spread spectrum provides no net SNR gain for power measurement:
+  // despread SNR = Ps/(N0·B_symbol); B_chip/B_symbol gain is offset by wider Rx BW
+  var CN0 = Pr_dBW - N0_dBW;
+  var SNR_dB = CN0 - 10*Math.log10(BW_Hz) + G_coh;
+
+  // 12. dP  (per 成电方案 §2.4: V_meas = V_s ± V_n, ΔP = 20·log₁₀(1+1/√SNR))
+  var SNR_lin = Math.pow(10,SNR_dB/10);
+  var dp = Math.abs(20*Math.log10(1+1/Math.sqrt(SNR_lin)));
+
+  // Required coh gain to reach 24.6dB threshold
+  var snr_no_coh = CN0 - 10*Math.log10(BW_Hz); // SNR before coh gain
+  var need_coh = Math.max(0, 24.6 - snr_no_coh);
+  document.getElementById('needCoh').textContent = need_coh.toFixed(1);
+  if (need_coh <= 0) {
+    document.getElementById('needCoh').style.color = '#3fb950';
+  } else {
+    document.getElementById('needCoh').style.color = '#f85149';
+  }
+
+  // === UPDATE UI ===
+  document.getElementById('r_slant').textContent = d_km.toFixed(1)+' km';
+  document.getElementById('r_fspl').textContent = L_fspl.toFixed(2);
+  document.getElementById('r_gas').textContent = A_gas.toFixed(2);
+  document.getElementById('r_cloud').textContent = A_cloud.toFixed(2);
+  document.getElementById('r_gamma').textContent = gamma_R.toFixed(4)+' dB/km';
+  document.getElementById('r_rain').textContent = A_rain.toFixed(2);
+  document.getElementById('r_hR').textContent = hR.toFixed(1)+' km';
+  document.getElementById('r_leff').textContent = L_eff.toFixed(2)+' km';
+  document.getElementById('r_total').textContent = A_total.toFixed(2);
+  document.getElementById('r_wet').textContent = wetAnt ? A_wet.toFixed(2)+' dB' : '—';
+  document.getElementById('r_gr').textContent = Gr.toFixed(1)+' dBi';
+  document.getElementById('r_ta').textContent = Ta.toFixed(0)+' K';
+  document.getElementById('r_tr').textContent = Tr.toFixed(0)+' K';
+  document.getElementById('r_tsys').textContent = Tsys.toFixed(0)+' K';
+  document.getElementById('r_n0').textContent = N0_dBW.toFixed(1)+' dBW/Hz';
+  document.getElementById('r_pr').textContent = Pr_dBm.toFixed(1)+' dBm  ('+Pr_dBW.toFixed(1)+' dBW)';
+  document.getElementById('r_cn0').textContent = CN0.toFixed(1)+' dB-Hz';
+  document.getElementById('r_snr').textContent = SNR_dB.toFixed(2)+' dB';
+  document.getElementById('r_dp').textContent = '±'+dp.toFixed(2)+' dB';
+
+  var snrEl = document.getElementById('r_snr');
+  snrEl.className = SNR_dB>=24.6?'good':(SNR_dB>=10?'warn':'bad');
+  var dpEl = document.getElementById('r_dp');
+  dpEl.className = dp<=0.5?'good':(dp<=2?'warn':'bad');
+
+  var ve = document.getElementById('verdict');
+  if (dp<=0.5) {ve.textContent='✓ 功率测量误差 ≤ ±0.5dB，满足测雨精度要求（5~8mm/h 面雨量反演）';ve.className='verdict-ok';}
+  else if (dp<=2) {
+    ve.innerHTML = '△ 功率测量误差超限，可能影响反演精度。<br>建议：增大天线口径 / 提高相干累积 / 等待更高仰角过境'+(wetAnt?' / <b>检查湿天线处理方案</b>':'');
+    ve.className='verdict-warn';
+  }
+  else {
+    ve.innerHTML = '✗ 链路质量严重不足。<br>建议：改用大口径抛物面天线 / 提高最低仰角约束 / 降低设计雨强目标'+(R>30?' / <b>等待卫星过顶（斜距更短）</b>':'');
+    ve.className='verdict-fail';
+  }
+
+  drawCharts(R, stn, Gr, NF, sigType, G_coh, A_rain, A_gas, A_cloud, L_fspl, A_wet, wetAnt);
+}
+
+// === CHARTS (Chart.js from CDN) ===
+function drawCharts(R, stn, Gr, NF, sigType, G_coh, A_rain, A_gas, A_cloud, L_fspl, A_wet, wetAnt) {
+  document.getElementById('curveLabel').textContent = R;
+
+  // Bar chart
+  var bctx = document.getElementById('barCanvas').getContext('2d');
+  if (barChart) barChart.destroy();
+  var barLabels = wetAnt ? ['自由空间损耗','雨衰减','气体衰减','云衰减','湿天线'] : ['自由空间损耗','雨衰减','气体衰减','云衰减'];
+  var barData = wetAnt ? [L_fspl,A_rain,A_gas,A_cloud,A_wet] : [L_fspl,A_rain,A_gas,A_cloud];
+  var barColors = wetAnt ? ['#484f58','#f85149','#d29922','#58a6ff','#f0883e'] : ['#484f58','#f85149','#d29922','#58a6ff'];
+  barChart = new Chart(bctx, {
+    type:'bar',
+    data:{
+      labels:barLabels,
+      datasets:[{data:barData,
+        backgroundColor:barColors,
+        borderWidth:1
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false}
+      },
+      scales:{y:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:function(v){return v+' dB'}}},x:{ticks:{color:'#8b949e',font:{size:10}}}}
+    },
+    plugins:[{
+      id:'barLabels',
+      afterDraw:function(chart){
+        var ctx = chart.ctx;
+        var meta = chart.getDatasetMeta(0);
+        var maxVal = Math.max.apply(null, chart.data.datasets[0].data);
+        chart.data.datasets[0].data.forEach(function(v,i){
+          if (!meta.data[i]) return;
+          var x = meta.data[i].x;
+          var y = meta.data[i].y;
+          var h = meta.data[i].height || 0;
+          var txt = v.toFixed(1);
+          ctx.save();
+          ctx.fillStyle = '#c9d1d9';
+          ctx.font = 'bold 10px Consolas,monospace';
+          ctx.textAlign = 'center';
+          // For very short bars (<15px), put label above bar; for tall, inside top
+          if (v > 0.7 * maxVal || h < 15) {
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(txt, x, Math.max(y - 3, 12));
+          } else {
+            ctx.textBaseline = 'top';
+            ctx.fillText(txt, x, y + 3);
+          }
+          ctx.restore();
+        });
+      }
+    }]
+  });
+
+  // Curve chart
+  var cc = document.getElementById('curveCanvas').getContext('2d');
+  if (curveChart) curveChart.destroy();
+
+  var els = [5,8,10,12,15,18,20,25,30,35,40,45,50,55,60,70,80,90];
+  var snrVals = [];
+  var th = 24.6;
+  var rainType = document.getElementById('rainType').value;
+  var A_gas_zenith_val = 0.28 * Math.exp(-stn.alt/8.0);
+  // Pre-compute wet antenna loss (depends only on R, not elevation)
+  var aw = 0;
+  if (wetAnt) {
+    var awAmax = parseFloat(document.getElementById('wetAmax').value);
+    var awR0 = parseFloat(document.getElementById('wetR0').value);
+    aw = awAmax * (1 - Math.exp(-R/awR0));
+  }
+
+  for (var i=0; i<els.length; i++) {
+    var el = els[i], th_rad = el*Math.PI/180;
+    var st = Math.sin(th_rad), ct = Math.cos(th_rad);
+    var dk = (R_EARTH+stn.alt)*(Math.sqrt(Math.pow((H_ORBIT+R_EARTH)/(R_EARTH+stn.alt),2)-ct*ct)-st);
+    var lf = 92.4+20*Math.log10(dk)+20*Math.log10(F_DOWN);
+    var hRc = rainType==='convective'?stn.h0+stn.hR_extra:stn.h0;
+    if (rainType==='convective' && polarization==='V') hRc += HR_POL_OFFSET;
+    var ls = Math.max((hRc-stn.alt)/Math.max(st,0.087),0.1);
+    var cf = P838[polarization];
+    var grs = cf.k*Math.pow(R,cf.a);
+    var xv = 1/Math.max(st,0.087)-1;
+    var ff_c = 1/(1 + 0.166*Math.pow(xv, 1.48));
+    var lef = Math.max(ls*ff_c, hRc-stn.alt);
+    var ar = grs*lef;
+    var ag = A_gas_zenith_val/Math.max(st,0.087);
+    var lwc = R<0.5 ? (stn.lwp||0.5) : Math.min((stn.lwp||0.5)+0.06*Math.pow(R,0.95),6.0);
+    var ac = (0.85*lwc)/Math.max(st,0.087);
+    var at = ar+ag+ac;
+    var pr = EIRP_DBW-lf-at-aw+Gr;
+    var tc = R>0.5?Math.min(30+260*(1-Math.exp(-R/8)),290):30;
+    var tsysc = tc+290*(Math.pow(10,NF/10)-1);
+    var n0c = K_DBW+10*Math.log10(tsysc);
+    var cn0c = pr-n0c;
+    var bw=1;
+    if (sigType==='wb15' || sigType==='wb15spread') bw=15;
+    snrVals.push(cn0c-10*Math.log10(bw)+G_coh);
+  }
+
+  curveChart = new Chart(cc, {
+    type:'line',
+    data:{
+      labels:els.map(function(e){return e+'°'}),
+      datasets:[
+        {label:'SNR',data:snrVals,borderColor:'#58a6ff',backgroundColor:'rgba(88,166,255,0.1)',fill:true,pointRadius:2,tension:0.3},
+        {label:'门限 24.6dB',data:els.map(function(){return th}),borderColor:'#f85149',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8b949e',font:{size:10},boxWidth:12}}},
+      scales:{y:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:function(v){return v+' dB'}}},x:{ticks:{color:'#8b949e',font:{size:9},maxTicksLimit:10}}}
+    },
+    plugins:[{
+      id:'curveLabels',
+      afterDraw:function(chart){
+        var ctx = chart.ctx, meta = chart.getDatasetMeta(0);
+        var keyIdx = {4:'15°',8:'30°',11:'45°',14:'60°',16:'90°'};
+        // Find threshold crossing
+        var crossIdx = -1;
+        for (var i=0; i<snrVals.length-1; i++) {
+          if ((snrVals[i]<th && snrVals[i+1]>=th) || (snrVals[i]>=th && snrVals[i+1]<th)) {
+            crossIdx = Math.abs(snrVals[i]-th) < Math.abs(snrVals[i+1]-th) ? i : i+1;
+            break;
+          }
+        }
+        if (crossIdx>=0) keyIdx[crossIdx] = els[crossIdx]+'°';
+        Object.keys(keyIdx).forEach(function(i){
+          i = parseInt(i);
+          if (!meta.data[i]) return;
+          var pt = meta.data[i];
+          var snrVal = snrVals[i];
+          ctx.save();
+          ctx.fillStyle = (snrVal>=th)?'#3fb950':'#f85149';
+          ctx.font = 'bold 10px Consolas,monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(keyIdx[i]+':'+snrVal.toFixed(1), pt.x, pt.y - 8);
+          // dot
+          ctx.beginPath();ctx.arc(pt.x,pt.y,4,0,2*Math.PI);
+          ctx.fillStyle = (snrVal>=th)?'#3fb950':'#f85149';
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+// === PRESETS ===
+var presets = {
+  extreme:{R:50,el:15,pol:'H',ant:'parabolic',D:0.45,NF:1.1,sig:'tone',coh:0,rain:'convective',stn:'paizhen'},
+  heavy_para:{R:50,el:30,pol:'H',ant:'parabolic',D:1.8,NF:1.1,sig:'wb15spread',coh:9.36,rain:'convective',stn:'beibeng'},
+  heavy_phase:{R:50,el:30,pol:'H',ant:'phased',N:576,NF:1.1,sig:'wb15spread',coh:9.36,rain:'convective',stn:'beibeng'},
+  moderate:{R:20,el:45,pol:'H',ant:'parabolic',D:0.45,NF:1.1,sig:'tone',coh:0,rain:'stratiform',stn:'paizhen'},
+  clear:{R:0,el:60,pol:'H',ant:'parabolic',D:0.45,NF:1.1,sig:'tone',coh:0,rain:'stratiform',stn:'paizhen'},
+  doc_ref:{R:50,el:15,pol:'H',ant:'parabolic',D:0.45,NF:1.1,sig:'tone',coh:0,rain:'convective',stn:'paizhen'}
+};
+
+function applyPreset(n) {
+  var p = presets[n];
+  _presetBusy = true;
+  document.getElementById('rainRate').value=p.R;updateSlider('rainRate');
+  document.getElementById('elevation').value=p.el;updateSlider('elevation');
+  setPol(p.pol,document.querySelectorAll('#polGroup button')[p.pol==='H'?0:1]);
+  document.getElementById('antType').value=p.ant||'parabolic';toggleAnt();
+  if(p.D){document.getElementById('diameter').value=p.D;updateSlider('diameter');}
+  if(p.N){document.getElementById('nElem').value=p.N;updateSlider('nElem');}
+  document.getElementById('noiseFig').value=p.NF;updateSlider('noiseFig');
+  document.getElementById('sigType').value=p.sig;
+  document.getElementById('cohGain').value=p.coh;updateSlider('cohGain');
+  document.getElementById('rainType').value=p.rain;
+  document.getElementById('station').value=p.stn;
+  _presetBusy = false;
+  calculate();
+}
+
+// === INIT ===
+calculate();
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js');}</script>
+</body>
+</html>
